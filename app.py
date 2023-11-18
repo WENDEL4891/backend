@@ -3,6 +3,8 @@ import subprocess
 import uuid
 from flask import Flask, request, jsonify, send_file
 import requests
+from moviepy.editor import VideoFileClip
+from io import BytesIO
 from werkzeug.utils import secure_filename
 import os
 import ffmpeg
@@ -46,4 +48,27 @@ def cosine_similarity():
     most_similar_index = max(range(len(vectors)), key=lambda index: 1 - distance.cosine(query_vector, vectors[index]))
 
     return jsonify({'most_similar_text': texts[most_similar_index]})
+
+@app.route('/get_video_duration', methods=['POST'])
+def get_video_duration():
+    data = request.get_json()
+    video_url = data.get('url')
+    if not video_url:
+        return "URL do vídeo é necessária", 400
+
+    try:
+        # Baixando o vídeo para a memória
+        video_data = requests.get(video_url).content
+        video_file = BytesIO(video_data)
+
+        # Usando moviepy para ler a duração
+        with VideoFileClip(video_file) as clip:
+            duration = clip.duration
+
+        return jsonify({"duration": duration})
+    except Exception as e:
+        return f"Erro ao processar a solicitação: {str(e)}", 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
